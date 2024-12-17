@@ -79,6 +79,29 @@ class Player:
   def startScript(self):
     self.subprocess = subprocess.Popen(["python3", self.script], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
     os.set_blocking(self.subprocess.stdout.fileno(), False)
+    success = True
+    try:
+      value = self.readLine();
+      if value.strip() != "READY":
+        success = False
+    except InvalidBotResponse:
+      print("Player could not be ready")
+      success = False
+      self.subprocess.terminate()
+    return success
+  def readLine(self):
+    line = ""
+    start_time = time.time()
+    current_time = start_time
+    while line == "" and current_time < start_time + 5:
+      line = self.subprocess.stdout.readline()
+      current_time = time.time()
+    if current_time >= start_time+5:
+      raise InvalidBotResponse("Took longer than 5 seconds.")
+    print(f"##FROM:{self.id}##")
+    print(line)
+    return line
+
 
 class GoFish:
   def __init__(self, players: list[Player]):
@@ -88,8 +111,11 @@ class GoFish:
     self.currentPlayer = None
     self.players = {}
     for player in players:
-      self.players[player.id] = player
-      player.startScript()
+      if player.startScript():
+        self.players[player.id] = player
+    if not 2 <= len(self.players) <= 5:
+      raise Exception("game requires 2-5 players")
+
 
   def sendGameState(self):
     state = {}
@@ -132,15 +158,8 @@ class GoFish:
     # - player replies with an invalid opponent
     #return opponent, rank
     line = ""
-    start_time = time.time()
-    current_time = start_time
-    while line == "" and current_time < start_time + 5:
-      line = self.currentPlayer.subprocess.stdout.readline()
-      current_time = time.time()
-    if current_time >= start_time+5:
-      raise InvalidBotResponse("Took longer than 5 seconds.")
-    print(f"##FROM:{self.currentPlayer.id}##")
-    print(line)
+    while line.strip() == "":
+      line = self.currentPlayer.readLine()
     result = re.search("^(.*) do you have any (10|[2-9]|[JQKA])s?$", line.strip())
     if not result:
       raise InvalidBotResponse("Asked for cards incorrectly.")
@@ -159,7 +178,8 @@ class GoFish:
     print(f"##TO:{player_id}##")
     print(data)
     # Send to STDIN of PLayer
-    self.players[player_id].subprocess.stdin.write(data)
+    self.players[player_id].subprocess.stdin.write(data + "\n")
+    self.players[player_id].subprocess.stdin.flush()
 
   def messageToAll(self, data):
     # Log
@@ -167,7 +187,8 @@ class GoFish:
     print(data)
     # Send to STDIN of all players
     for player in self.players.keys():
-      self.players[player].subprocess.stdin.write(data)
+      self.players[player].subprocess.stdin.write(data + "\n")
+      self.players[player].subprocess.stdin.flush()
 
   def start(self):
     self.deck.shuffle()

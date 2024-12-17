@@ -25,6 +25,7 @@ class Bot:
   def listen(self):
     run = True
     logging.debug('Started')
+    print("READY")
     while run:
       # Check for commands sent to us via the game master.
       line = sys.stdin.readline()
