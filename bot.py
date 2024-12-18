@@ -22,14 +22,16 @@ class Bot:
       self.me = Player(status["you"]["id"], script)
       for card_str in status["you"]["hand"]:
         self.me.addCard(Card.createfromStr(card_str))
+  def print(self, value):
+    logging.debug("Printed: %s", value)
+    print(value, flush=True)
   def listen(self):
     run = True
     logging.debug('Started')
-    print("READY")
+    self.print("READY")
     while run:
       # Check for commands sent to us via the game master.
       line = sys.stdin.readline()
-      logging.debug('recieved: %s', line)
       if line.strip() == "STATUS":
         logging.debug('Found STATUS command from game master')
         self.updateStatus()

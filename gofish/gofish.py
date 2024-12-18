@@ -1,4 +1,3 @@
-from email import message
 import os
 import random
 import subprocess
@@ -6,6 +5,7 @@ from dataclasses import dataclass, field
 import yaml
 import time
 import re
+import sys
 
 SUITS = ['H', 'D', 'C', 'S']
 RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
@@ -77,11 +77,11 @@ class Player:
   def __str__(self):
     return self.id
   def startScript(self):
-    self.subprocess = subprocess.Popen(["python3", self.script], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
+    self.subprocess = subprocess.Popen([sys.executable, self.script], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, bufsize=0)
     os.set_blocking(self.subprocess.stdout.fileno(), False)
     success = True
     try:
-      value = self.readLine();
+      value = self.readLine()
       if value.strip() != "READY":
         success = False
     except InvalidBotResponse:
@@ -93,10 +93,14 @@ class Player:
     line = ""
     start_time = time.time()
     current_time = start_time
-    while line == "" and current_time < start_time + 5:
-      line = self.subprocess.stdout.readline()
+    end_time = start_time + 5
+    while line.strip() == "" and current_time < end_time:
+      try:
+        line = self.subprocess.stdout.readline()
+      except TypeError:
+        pass
       current_time = time.time()
-    if current_time >= start_time+5:
+    if current_time >= end_time:
       raise InvalidBotResponse("Took longer than 5 seconds.")
     print(f"##FROM:{self.id}##")
     print(line)
