@@ -146,7 +146,7 @@ class GoFish:
             "books": player.books,
           }
         } | state
-        self.messageToPlayer(player.id, "STATUS\n" + yaml.dump(you, Dumper=VerboseSafeDumper) + "\nEND STATUS")
+      self.messageToPlayer(player.id, "STATUS\n" + yaml.dump(you, Dumper=VerboseSafeDumper) + "\nEND STATUS")
 
   def startTurn(self):
     self.messageToAll("TURN START")

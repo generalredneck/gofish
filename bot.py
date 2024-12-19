@@ -43,7 +43,7 @@ class Bot:
         self.draw()
         # If this draw happens to be what you were asking for, show it and continue
       else:
-        match = re.search("\b((?:[2-9]|10|[JQKA])[HDCS])(?:,\s*((?:[2-9]|10|[JQKA])[HDCS]))?(?:,\s*((?:[2-9]|10|[JQKA])[HDCS]))?\b", answer, re.IGNORECASE)
+        match = re.search(r"\b((?:[2-9]|10|[JQKA])[HDCS])(?:,\s*((?:[2-9]|10|[JQKA])[HDCS]))?(?:,\s*((?:[2-9]|10|[JQKA])[HDCS]))?\b", answer, re.IGNORECASE)
         if match:
           # Extract matched cards
           for card in match.groups():
