@@ -79,6 +79,8 @@ class Player:
   def startScript(self):
     self.subprocess = subprocess.Popen([sys.executable, self.script], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, bufsize=0)
     os.set_blocking(self.subprocess.stdout.fileno(), False)
+    # Wait a bit because it seems to help with stdout parsing.
+    time.sleep(1)
     success = True
     try:
       value = self.readLine()
@@ -94,7 +96,8 @@ class Player:
     start_time = time.time()
     current_time = start_time
     end_time = start_time + 5
-    while line.strip() == "" and current_time < end_time:
+    while not line and current_time < end_time:
+      time.sleep(1)
       try:
         line = self.subprocess.stdout.readline()
       except TypeError:
@@ -124,6 +127,7 @@ class GoFish:
   def sendGameState(self):
     state = {}
     state["current_player"] = self.currentPlayer.id
+    state["pool_empty"] = len(self.deck.cards) == 0
     state["players"] = {}
     for player in self.players.values():
       state["players"][player.id] = {
@@ -131,17 +135,18 @@ class GoFish:
         "cards_in_hand": len(player.hand),
         "books": player.books
       }
+    for player in self.players.values():
       hand = []
       for card in player.hand:
         hand.append(str(card))
-      you = {
-        "you":{
-          "id": player.id,
-          "hand": hand,
-          "books": player.books,
-        }
-      } | state
-      self.messageToPlayer(player.id, "STATUS\n" + yaml.dump(you, Dumper=VerboseSafeDumper) + "\nEND STATUS")
+        you = {
+          "you":{
+            "id": player.id,
+            "hand": hand,
+            "books": player.books,
+          }
+        } | state
+        self.messageToPlayer(player.id, "STATUS\n" + yaml.dump(you, Dumper=VerboseSafeDumper) + "\nEND STATUS")
 
   def startTurn(self):
     self.messageToAll("TURN START")
@@ -164,7 +169,7 @@ class GoFish:
     line = ""
     while line.strip() == "":
       line = self.currentPlayer.readLine()
-    result = re.search("^(.*) do you have any (10|[2-9]|[JQKA])s?$", line.strip())
+    result = re.search("^(.*) do you have any ([2-9]|10|[JQKA])s?$", line.strip())
     if not result:
       raise InvalidBotResponse("Asked for cards incorrectly.")
     if result.group(1) in self.players and result.group(1) != self.currentPlayer.id:
@@ -175,6 +180,7 @@ class GoFish:
       rank = result.group(2)
     else:
       raise InvalidBotResponse("")
+    #TODO: Check for cards in hand
     return opponent, rank
 
   def messageToPlayer(self, player_id:str, data):
@@ -218,8 +224,13 @@ class GoFish:
         self.kickPlayer(self.currentPlayer.id)
       #if continue_turn:
         #self.askPlayer
+        # Check Opponents Respance
       self.endTurn()
-      game_end = True
+      if num_of_players < 2:
+        game_end = True
+    # Determine Winner
+
+
   def endTurn(self):
     player_ids = list(self.players)
     index = player_ids.index(self.currentPlayer.id)
